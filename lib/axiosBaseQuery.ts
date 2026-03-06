@@ -125,8 +125,8 @@ axiosInstance.interceptors.request.use(
       }
     }
 
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers.set("Authorization", `Bearer ${token}`);
     }
     return config;
   },
@@ -152,8 +152,11 @@ axiosInstance.interceptors.response.use(
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            if (originalRequest.headers && token) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (token) {
+              originalRequest.headers = {
+                ...originalRequest.headers,
+                Authorization: `Bearer ${token}`,
+              };
               return axiosInstance(originalRequest);
             }
             return Promise.reject(error);
@@ -193,9 +196,10 @@ axiosInstance.interceptors.response.use(
           if (newRefreshToken) tokenStorage.setRefresh(newRefreshToken);
           refreshFailed = false;
           processQueue(null, newAccessToken);
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          }
+          originalRequest.headers = {
+            ...originalRequest.headers,
+            Authorization: `Bearer ${newAccessToken}`,
+          };
           return axiosInstance(originalRequest);
         }
 
