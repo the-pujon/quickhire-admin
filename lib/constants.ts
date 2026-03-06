@@ -40,6 +40,7 @@ export const NAV_ITEMS = [
   { key: "jobs", label: "Job Listings", href: "/jobs" },
   { key: "applications", label: "Applications", href: "/applications" },
   { key: "create", label: "Post New Job", href: "/create" },
+  { key: "users", label: "User Management", href: "/users" },
 ] as const;
 
 export type NavKey = (typeof NAV_ITEMS)[number]["key"];

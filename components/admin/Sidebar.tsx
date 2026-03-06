@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Briefcase, Plus, Settings, Users, Zap } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Briefcase, Plus, LogOut, Users, Zap } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/constants";
 import { useGetAllApplicationsQuery } from "@/redux/api/jobBoardApi";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
+import { selectCurrentUser, logout as logoutAction } from "@/redux/slices/authSlice";
+import { useLogoutMutation } from "@/redux/api/authApi";
+import { toast } from "sonner";
 
 const NAV_ICONS = {
   jobs: Briefcase,
   applications: Users,
   create: Plus,
+  users: Users,
 } as const;
 
 interface SidebarProps {
@@ -19,8 +24,33 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(selectCurrentUser);
   const { data: appsData } = useGetAllApplicationsQuery();
   const applicationCount = appsData?.data?.length ?? 0;
+  const [logoutMutation] = useLogoutMutation();
+
+  async function handleLogout() {
+    onClose();
+    try {
+      await logoutMutation().unwrap();
+    } catch {
+      // ignore
+    }
+    dispatch(logoutAction());
+    toast.success("Logged out successfully");
+    router.push("/login");
+  }
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "QA";
 
   return (
     <aside
@@ -95,20 +125,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* User footer */}
       <div className="px-3 pb-4 pt-3 border-t border-slate-100">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors group">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg mb-1">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shrink-0">
-            QA
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
-              Admin
+              {user?.name || "Admin"}
             </p>
             <p className="text-[11px] text-slate-400 truncate leading-tight">
-              admin@quickhire.io
+              {user?.email || ""}
             </p>
           </div>
-          <Settings className="w-3.5 h-3.5 text-slate-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-semibold text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Sign Out
+        </button>
       </div>
     </aside>
   );

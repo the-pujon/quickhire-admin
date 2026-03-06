@@ -1,23 +1,130 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import type { BaseQueryFn } from "@reduxjs/toolkit/query/react";
-import Cookies from "js-cookie";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const API_BASE = `${API_URL}/api/v1`;
 
-// Create axios instance with default config
+// ── localStorage token helpers ─────────────────────────────────────────────────
+// Single source of truth for token read/write — no cookies needed.
+export const tokenStorage = {
+  getAccess: (): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem("accessToken");
+    } catch {
+      return null;
+    }
+  },
+  getRefresh: (): string | null => {
+    if (typeof window === "undefined") return null;
+    try {
+      return localStorage.getItem("refreshToken");
+    } catch {
+      return null;
+    }
+  },
+  setAccess: (token: string): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("accessToken", token);
+    } catch {}
+  },
+  setRefresh: (token: string): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem("refreshToken", token);
+    } catch {}
+  },
+  set: (access: string, refresh: string): void => {
+    tokenStorage.setAccess(access);
+    tokenStorage.setRefresh(refresh);
+  },
+  clear: (): void => {
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    } catch {}
+  },
+};
+
+// ── Axios instance ─────────────────────────────────────────────────────────────
 const axiosInstance = axios.create({
   baseURL: API_BASE,
-  withCredentials: true, // Include cookies for auth
-  headers: {
-    "Content-Type": "application/json",
-  },
+  withCredentials: false, // cookies not needed — tokens live in localStorage
+  headers: { "Content-Type": "application/json" },
 });
 
-// Request interceptor to attach access token
+// ── Shared token-refresh state (used by both request and response interceptors) ─
+let isRefreshing = false;
+let refreshFailed = false;
+let failedQueue: Array<{
+  resolve: (token: string | null) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((p) => (error ? p.reject(error) : p.resolve(token)));
+  failedQueue = [];
+};
+
+// Attach access token — proactively refresh if access token is missing but refresh token exists
 axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = Cookies.get("accessToken");
+  async (config) => {
+    let token = tokenStorage.getAccess();
+
+    // Proactive refresh: no access token but refresh token is available.
+    // Skip for the refresh-token endpoint itself to prevent double-rotation.
+    if (
+      !token &&
+      tokenStorage.getRefresh() &&
+      !refreshFailed &&
+      !config.url?.includes("refresh-token")
+    ) {
+      if (isRefreshing) {
+        // Another refresh is already in flight — wait for it to finish
+        token = await new Promise<string | null>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).catch(() => null);
+      } else {
+        isRefreshing = true;
+        try {
+          const refreshToken = tokenStorage.getRefresh();
+          const response = await axios.post(
+            `${API_BASE}/auth/refresh-token`,
+            { refreshToken },
+            { withCredentials: false },
+          );
+          const responseData = response.data as {
+            data?: { accessToken: string; refreshToken?: string };
+            accessToken?: string;
+            refreshToken?: string;
+          };
+          const newAccessToken =
+            responseData?.data?.accessToken ?? responseData?.accessToken;
+          const newRefreshToken =
+            responseData?.data?.refreshToken ?? responseData?.refreshToken;
+
+          if (newAccessToken) {
+            tokenStorage.setAccess(newAccessToken);
+            if (newRefreshToken) tokenStorage.setRefresh(newRefreshToken);
+            refreshFailed = false;
+            processQueue(null, newAccessToken);
+            token = newAccessToken;
+          } else {
+            refreshFailed = true;
+            processQueue(new Error("Invalid refresh response"), null);
+          }
+        } catch (err) {
+          refreshFailed = true;
+          processQueue(err, null);
+          tokenStorage.clear();
+        } finally {
+          isRefreshing = false;
+        }
+      }
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,25 +133,6 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// Response interceptor for token refresh
-let isRefreshing = false;
-let refreshFailed = false; // Track if refresh has failed to prevent retry loops
-let failedQueue: Array<{
-  resolve: (token: string | null) => void;
-  reject: (error: unknown) => void;
-}> = [];
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -52,15 +140,14 @@ axiosInstance.interceptors.response.use(
       _retry?: boolean;
     };
 
-    // If 401 and not already retrying
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Don't try to refresh if we've already failed or are already refreshing without success
-      if (refreshFailed) {
-        return Promise.reject(error);
-      }
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes("refresh-token")
+    ) {
+      if (refreshFailed) return Promise.reject(error);
 
       if (isRefreshing) {
-        // Queue the request while refresh is in progress
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -78,35 +165,36 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = Cookies.get("refreshToken");
+        const refreshToken = tokenStorage.getRefresh();
         if (!refreshToken) {
           refreshFailed = true;
-          throw new Error("No refresh token");
+          throw new Error("No refresh token available");
         }
 
-        const response = await axios.post(`${API_URL}/auth/refresh-token`, {
-          refreshToken,
-        });
+        // Send refreshToken in body — backend accepts both cookie and body now
+        const response = await axios.post(
+          `${API_BASE}/auth/refresh-token`,
+          { refreshToken },
+          { withCredentials: false },
+        );
 
-        // Handle both wrapped (TransformInterceptor) and direct response formats
         const responseData = response.data as {
-          data?: { accessToken: string; refreshToken: string };
+          data?: { accessToken: string; refreshToken?: string };
           accessToken?: string;
           refreshToken?: string;
         };
-        const tokenData = responseData.data || responseData;
-        const { accessToken, refreshToken: newRefreshToken } = tokenData;
+        const newAccessToken =
+          responseData?.data?.accessToken ?? responseData?.accessToken;
+        const newRefreshToken =
+          responseData?.data?.refreshToken ?? responseData?.refreshToken;
 
-        if (accessToken && newRefreshToken) {
-          Cookies.set("accessToken", accessToken, { expires: 1 }); // 1 day
-          Cookies.set("refreshToken", newRefreshToken, { expires: 30 }); // 30 days
-
-          // Reset the failure flag on successful refresh
+        if (newAccessToken) {
+          tokenStorage.setAccess(newAccessToken);
+          if (newRefreshToken) tokenStorage.setRefresh(newRefreshToken);
           refreshFailed = false;
-          processQueue(null, accessToken);
-
+          processQueue(null, newAccessToken);
           if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
           }
           return axiosInstance(originalRequest);
         }
@@ -115,20 +203,9 @@ axiosInstance.interceptors.response.use(
         throw new Error("Invalid refresh response");
       } catch (refreshError) {
         const err = refreshError as AxiosError;
-
-        // If we get throttled (429), mark as failed and don't retry
-        if (err.response?.status === 429) {
-          refreshFailed = true;
-        }
-
+        if (err.response?.status === 429) refreshFailed = true;
         processQueue(refreshError, null);
-        // Clear tokens on refresh failure
-        Cookies.remove("accessToken");
-        Cookies.remove("refreshToken");
-
-        // Don't redirect here - let the app handle it through Redux state
-        // Redirecting can cause more API calls and create loops
-
+        tokenStorage.clear();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -139,7 +216,7 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-// RTK Query base query using Axios
+// ── RTK Query base query ───────────────────────────────────────────────────────
 export interface AxiosBaseQueryArgs {
   url: string;
   method?: AxiosRequestConfig["method"];
@@ -154,13 +231,7 @@ export const axiosBaseQuery: BaseQueryFn<
   { status?: number; data?: unknown; message?: string }
 > = async ({ url, method = "GET", data, params, headers }) => {
   try {
-    const result = await axiosInstance({
-      url,
-      method,
-      data,
-      params,
-      headers,
-    });
+    const result = await axiosInstance({ url, method, data, params, headers });
     return { data: result.data };
   } catch (axiosError) {
     const err = axiosError as AxiosError<{ message?: string }>;
@@ -174,7 +245,7 @@ export const axiosBaseQuery: BaseQueryFn<
   }
 };
 
-// Reset refresh state - call this when user logs in successfully
+// Call after successful login to reset any prior failed-refresh state
 export const resetRefreshState = () => {
   refreshFailed = false;
   isRefreshing = false;
