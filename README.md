@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# QuickHire Admin — Admin Dashboard
 
-## Getting Started
+A protected admin panel for the QuickHire job board platform, built with **Next.js 16**, **TypeScript**, and **Tailwind CSS v4**. Allows administrators to manage job postings, view applications, and manage users.
 
-First, run the development server:
+---
+
+## ✨ Features
+
+- **Dashboard Overview** — Summary stats (total jobs, applications, users)
+- **Job Management** — Create new jobs, view all jobs, delete jobs
+- **Application Management** — View all applications per job with applicant details
+- **User Management** — View users, change roles (Admin → Moderator → Customer)
+- **Protected Routes** — Admin-only layout guard with JWT authentication
+- **Responsive Sidebar Navigation**
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS v4 |
+| State / Data | Redux Toolkit, RTK Query |
+| HTTP | Axios (with auto token refresh) |
+| UI Components | Radix UI, shadcn/ui, Sonner (toasts) |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm / yarn / pnpm
+- Backend API running (see `backend/README.md`)
+- An admin or super-admin account created via the backend seed or API
+
+### Installation
 
 ```bash
+# 1. Navigate to the project directory
+cd "qtech admi"
+
+# 2. Install dependencies
+npm install
+
+# 3. Copy the environment file and fill in values
+cp .env.example .env.local
+
+# 4. Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3001](http://localhost:3001) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Build for Production
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🔐 Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Create a `.env.local` file in the `qtech admi/` directory:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+# Base URL of the backend API
+NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+```

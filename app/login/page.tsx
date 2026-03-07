@@ -121,7 +121,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-slate-50 font-sans">
-      {/* ── Left – Form Panel ─────────────────────────────────────── */}
+      {/*      Left – Form Panel                                         */}
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -254,7 +254,7 @@ export default function LoginPage() {
         </motion.div>
       </div>
 
-      {/* ── Right – Brand Panel ─────────────────────────────────────── */}
+      {/*      Right – Brand Panel                                         */}
       <div className="hidden lg:flex w-[44%] bg-indigo-600 flex-col items-center justify-center relative overflow-hidden px-14">
         <div className="absolute -top-40 -right-40 size-96 rounded-full bg-white/5" />
         <div className="absolute -bottom-24 -left-24 size-80 rounded-full bg-white/5" />

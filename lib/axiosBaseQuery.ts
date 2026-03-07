@@ -4,7 +4,7 @@ import type { BaseQueryFn } from "@reduxjs/toolkit/query/react";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const API_BASE = `${API_URL}/api/v1`;
 
-// ── localStorage token helpers ─────────────────────────────────────────────────
+//      localStorage token helpers
 // Single source of truth for token read/write — no cookies needed.
 export const tokenStorage = {
   getAccess: (): string | null => {
@@ -48,14 +48,14 @@ export const tokenStorage = {
   },
 };
 
-// ── Axios instance ─────────────────────────────────────────────────────────────
+//      Axios instance
 const axiosInstance = axios.create({
   baseURL: API_BASE,
   withCredentials: false, // cookies not needed — tokens live in localStorage
   headers: { "Content-Type": "application/json" },
 });
 
-// ── Shared token-refresh state (used by both request and response interceptors) ─
+//      Shared token-refresh state (used by both request and response interceptors) ─
 let isRefreshing = false;
 let refreshFailed = false;
 let failedQueue: Array<{
@@ -220,7 +220,7 @@ axiosInstance.interceptors.response.use(
   },
 );
 
-// ── RTK Query base query ───────────────────────────────────────────────────────
+//      RTK Query base query
 export interface AxiosBaseQueryArgs {
   url: string;
   method?: AxiosRequestConfig["method"];

@@ -127,7 +127,7 @@ export default function CreateJobPanel({ onSuccess }: CreateJobPanelProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* ── Basic Info ───────────────────────────────────────── */}
+          {/*      Basic Info                                             */}
           <FormSection icon={FileText} label="Basic Information">
             <FormField label="Job Title" required error={errors.title}>
               <input
@@ -160,7 +160,7 @@ export default function CreateJobPanel({ onSuccess }: CreateJobPanelProps) {
 
           <hr className="border-slate-100" />
 
-          {/* ── Classification ───────────────────────────────────── */}
+          {/*      Classification                                     ─ */}
           <FormSection icon={Tag} label="Classification">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField label="Category" required>
@@ -211,7 +211,7 @@ export default function CreateJobPanel({ onSuccess }: CreateJobPanelProps) {
 
           <hr className="border-slate-100" />
 
-          {/* ── Role Details ─────────────────────────────────────── */}
+          {/*      Role Details                                         */}
           <FormSection icon={Layers} label="Role Details">
             <FormField
               label="Job Description"
@@ -287,7 +287,7 @@ export default function CreateJobPanel({ onSuccess }: CreateJobPanelProps) {
             </FormField>
           </FormSection>
 
-          {/* ── Footer ───────────────────────────────────────────── */}
+          {/*      Footer   ─ */}
           <div className="flex items-center gap-3 pt-1 border-t border-slate-100">
             <button
               type="submit"

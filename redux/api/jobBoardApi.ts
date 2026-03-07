@@ -1,6 +1,6 @@
 import { baseApi } from "./baseApi";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+//     Types     ─
 
 export interface JobListing {
   _id: string;
@@ -79,7 +79,7 @@ export interface ApplicationsResponse {
   data: ApplicationItem[];
 }
 
-// ─── API ─────────────────────────────────────────────────────────────────────
+//     API
 
 export const jobBoardApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

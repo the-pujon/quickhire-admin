@@ -81,7 +81,7 @@ export default function JobsPanel({
 
   return (
     <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm shadow-slate-100/60">
-      {/* ── Toolbar ──────────────────────────────────────────────── */}
+      {/*      Toolbar      ─ */}
       <div className="flex items-center gap-3 px-5 py-3.5 border-b border-slate-100 flex-wrap">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
@@ -118,7 +118,7 @@ export default function JobsPanel({
         </div>
       </div>
 
-      {/* ── Body ─────────────────────────────────────────────────── */}
+      {/*      Body         ─ */}
       {isLoading ? (
         <SkeletonRows />
       ) : jobs.length === 0 ? (
