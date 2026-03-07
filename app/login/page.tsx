@@ -24,8 +24,8 @@ import {
 } from "@/redux/slices/authSlice";
 
 const DEMO_CREDENTIALS = {
-  email: "admin@demo.com",
-  password: "Admin@12345",
+  email: "pujondas1234@gmail.com",
+  password: "QN7$ED#buYEVmpr",
 };
 
 function inputCls(hasError: boolean) {
@@ -62,11 +62,29 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, currentUser, router]);
 
-  function fillDemo() {
+  async function handleDemoLogin() {
     setEmail(DEMO_CREDENTIALS.email);
     setPassword(DEMO_CREDENTIALS.password);
     setErrors({});
-    toast.info("Demo credentials filled!");
+    try {
+      const result = await login({
+        email: DEMO_CREDENTIALS.email,
+        password: DEMO_CREDENTIALS.password,
+      }).unwrap();
+      const role = result.data?.user?.role;
+      if (role !== "admin" && role !== "superAdmin") {
+        dispatch(logout());
+        toast.error("Access denied. Admin or Super Admin role required.");
+        return;
+      }
+      toast.success("Welcome! You are now signed in with the demo account.");
+      router.push("/jobs");
+    } catch (err: unknown) {
+      const msg =
+        (err as { data?: { message?: string } })?.data?.message ||
+        "Could not sign in with demo account. Please try again.";
+      toast.error(msg);
+    }
   }
 
   function validate() {
@@ -138,21 +156,19 @@ export default function LoginPage() {
             <div>
               <p className="text-[12px] font-bold text-indigo-700 flex items-center gap-1.5">
                 <Shield className="size-3.5" />
-                Demo Admin Account
+                Just want to explore? 👇
               </p>
-              <p className="text-[11px] text-indigo-600 mt-1 font-mono">
-                {DEMO_CREDENTIALS.email}
-              </p>
-              <p className="text-[11px] text-indigo-600 font-mono">
-                {DEMO_CREDENTIALS.password}
+              <p className="text-[11px] text-indigo-500 mt-1">
+                Click the button — no setup needed!
               </p>
             </div>
             <button
               type="button"
-              onClick={fillDemo}
-              className="shrink-0 mt-0.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm"
+              onClick={handleDemoLogin}
+              disabled={isLoading}
+              className="shrink-0 mt-0.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-[12px] font-semibold rounded-lg transition-colors shadow-sm whitespace-nowrap"
             >
-              Fill
+              {isLoading ? "Signing in…" : "🚀 Demo Login"}
             </button>
           </div>
 
